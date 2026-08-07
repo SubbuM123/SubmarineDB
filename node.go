@@ -11,9 +11,14 @@ import (
 	// "errors"
 )
 
+type Value struct {
+	Data string
+	Descriptors map[string]struct{}
+}
+
 type Node struct {
-	hashtable map[string]string
-	pred_replica map[string]string
+	hashtable map[string]Value
+	pred_replica map[string]Value
 
 	id        uint64
 	addr      string
@@ -43,11 +48,11 @@ type NodeRef struct {
 
 type RPCArgs struct {
 	Key   string
-	Value string
+	Value Value
 }
 
 type RPCReply struct {
-	Value  string
+	Value  Value
 	Exists bool
 }
 
@@ -89,7 +94,7 @@ func (n *Node) event_manage() {
 				continue
 			}
 
-			b := n.Put(args[1], args[2])
+			b := n.Put(args[1], Value{Data: args[2]})
 
 			if b {
 				fmt.Println("PUT succeeded")
@@ -106,7 +111,7 @@ func (n *Node) event_manage() {
 			b, val := n.Get(args[1])
 
 			if b {
-				fmt.Println(val)
+				fmt.Println(val.Data)
 			} else {
 				fmt.Println("GET failed")
 			}
@@ -125,8 +130,13 @@ func (n *Node) event_manage() {
 				fmt.Println("DELETE failed")
 			}
 		case "ls":
-			for key := range n.hashtable {
+			for key, value := range n.hashtable {
 				fmt.Println("key " + key)
+				// fmt.Println("Value " + value.Data)
+				for k := range value.Descriptors {
+					fmt.Println("Desc " + k)
+				}
+				
 			}
 		case "lsrep":
 			for key := range n.pred_replica {

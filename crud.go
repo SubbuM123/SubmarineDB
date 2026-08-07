@@ -2,11 +2,11 @@ package main
 
 // import "fmt"
 
-func (n *Node) Insert(key string, value string) {
+func (n *Node) Insert(key string, value Value) {
 	n.hashtable[key] = value
 }
 
-func (n *Node) Find(key string) (string, bool) {
+func (n *Node) Find(key string) (Value, bool) {
 	val, exists := n.hashtable[key]
 	return val, exists
 }
@@ -15,10 +15,10 @@ func (n *Node) Remove(key string) {
 	delete(n.hashtable, key)
 }
 
-func (n *Node) Put(key string, value string) bool {
+func (n *Node) Put(key string, value Value) bool {
 	h := hash(key)
 	if n.Owns(h) {
-		log_data(n.id, "PUT "+key+", "+value)
+		log_data(n.id, "PUT "+key+", "+value.Data)
 		n.Insert(key, value)
 	} else {
 		err := n.SendPut(n.FindOwner(h), key, value)
@@ -30,19 +30,19 @@ func (n *Node) Put(key string, value string) bool {
 	return true
 }
 
-func (n *Node) Get(key string) (bool, string) {
+func (n *Node) Get(key string) (bool, Value) {
 	h := hash(key)
 	if n.Owns(h) {
-		if _, exists := n.hashtable[key]; exists {
-			log_data(n.id, "GOT "+ key)
-			return true, n.hashtable[key]
+		if value, exists := n.hashtable[key]; exists {
+			log_data(n.id, "GOT "+key)
+			return true, value
 		}
-		return false, "GET failed"
+		return false, Value{}
 	} else {
 		val, err := n.SendGet(n.FindOwner(h), key)
 
 		if err != nil {
-			return false, ""
+			return false, Value{}
 		}
 		return true, val
 	}

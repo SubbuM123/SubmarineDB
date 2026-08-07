@@ -6,7 +6,7 @@ import ("time"
 
 
 type ReplicaArgs struct {
-	Replica map[string]string
+	Replica map[string]Value
 }
 
 func (n *Node) Replication() {
@@ -50,6 +50,6 @@ func (n *Node) RemoteUpdateReplica(args ReplicaArgs, reply *bool) error {
     return nil
 }
 
-func (n *Node) UpdateReplica(rep map[string]string) {
+func (n *Node) UpdateReplica(rep map[string]Value) {
 	n.pred_replica = rep
 }

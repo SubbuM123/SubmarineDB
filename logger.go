@@ -73,7 +73,7 @@ func (n *Node) BackupData() {
 		file,
 		"%s : %s \n",
 		key,
-		value,)
+		value.Data,)
 	}
 	
 }
