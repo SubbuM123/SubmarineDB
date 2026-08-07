@@ -19,7 +19,7 @@ func main() {
 	log_addr := "127.0.0.1:" + strconv.Itoa(int(8000 + node_id))
 	py_addr := "127.0.0.1:" + strconv.Itoa(int(7000 + node_id))
 
-	node_bs, _ := strconv.ParseUint(id, 10, 64)
+	node_bs, _ := strconv.ParseUint(bs, 10, 64)
 	bs_addr := "127.0.0.1:" + strconv.Itoa(int(8000 + node_bs))
 
 	n := Node{

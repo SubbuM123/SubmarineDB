@@ -269,7 +269,7 @@ def download_video(filename):
         for index, fut in enumerate(futures):
             data = fut.result()  # blocks only until *this* chunk is ready
             f.write(data)
-            print(f"Wrote chunk {index}/{len(futures) - 1}")
+            # print(f"Wrote chunk {index}/{len(futures) - 1}")
 
     print("\nDownload complete")
     print("Saved to:", output_path)
