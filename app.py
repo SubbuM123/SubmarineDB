@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 import random
 
+import os
+
 
 # -------------------------------
 # Configuration
@@ -266,6 +268,23 @@ def download_video(filename):
     print("\nDownload complete")
     print("Saved to:", output_path)
 
+def clear_output():
+
+    output_dir = Path("output")
+
+    if not output_dir.exists():
+        print("Nothing to clear — output/ doesn't exist")
+        return
+
+    count = 0
+
+    for p in output_dir.iterdir():
+        if p.is_file():
+            p.unlink()
+            count += 1
+
+    print(f"Cleared {count} file(s) from output/")
+
 
 # -------------------------------
 # CLI
@@ -312,6 +331,12 @@ def main():
                 parts[1]
             )
             print("Download took: " + str(time.time() - t))
+        
+        elif parts[0] == "view":
+            os.startfile(str(parts[1]))
+
+        elif parts[0] == "clear":
+            clear_output()
 
         else:
 
@@ -323,6 +348,9 @@ def main():
             )
             print(
                 " get <file>"
+            )
+            print(
+                " view <file>"
             )
             print(
                 " exit"
