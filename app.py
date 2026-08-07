@@ -82,6 +82,7 @@ def upload_chunk(chunk_hash, data):
         now.strftime("%H:%M:%S"),
         now.strftime("%Y-%m-%d")
     ]
+    # TODO metadata = tag_chunk()
 
     value = {
         "data": base64.b64encode(data).decode("ascii"),
@@ -94,7 +95,7 @@ def upload_chunk(chunk_hash, data):
     }
 
     url = (
-        PUT_ENDPOINT
+        get_node() + "/put_chunk"
     )
 
     response = requests.put(
@@ -131,85 +132,76 @@ def download_chunk(chunk_hash):
 
     return base64.b64decode(encoded_data)
 
-
-# -------------------------------
-# Manifest
-# -------------------------------
-
-# def save_manifest(manifest):
-
-#     MANIFEST_DIR.mkdir(
-#         exist_ok=True
-#     )
-
-#     filename = (
-#         MANIFEST_DIR /
-#         f"{manifest['video_id']}.json"
-#     )
-
-#     with open(filename, "w") as f:
-#         json.dump(
-#             manifest,
-#             f,
-#             indent=4
-#         )
-
-#     print(
-#         f"Manifest saved: {filename}"
-#     )
-
-
 # -------------------------------
 # Upload Video
 # -------------------------------
 
-def upload_video(filename):
+# def upload_video(filename):
 
+#     path = Path(filename)
+
+#     if not path.exists():
+#         raise FileNotFoundError(filename)
+
+
+#     video_id = str(uuid.uuid4())
+#     video_name = path.name
+#     chunk_hashes = []
+
+
+#     print("Uploading:", video_name)
+#     print("Video ID:", video_id)
+
+
+#     for index, chunk in split_file(filename):
+
+#         chunk_hash = sha256(chunk)
+#         print(
+#             f"Uploading chunk {index}: {chunk_hash}"
+#         )
+#         upload_chunk(
+#             chunk_hash,
+#             chunk
+#         )
+#         chunk_hashes.append(chunk_hash)
+
+#     VIDEO_CHUNK_MAP[video_name] = chunk_hashes
+#     print("\nUpload complete")
+
+def upload_video(filename):
     path = Path(filename)
 
     if not path.exists():
         raise FileNotFoundError(filename)
 
-
     video_id = str(uuid.uuid4())
     video_name = path.name
-    chunk_hashes = []
-
-
-    # manifest = {
-    #     "video_id": video_id,
-    #     "filename": video_name,
-    #     "chunk_size": CHUNK_SIZE,
-    #     "chunks": []
-    # }
-
 
     print("Uploading:", video_name)
     print("Video ID:", video_id)
 
+    # Reading + hashing is local/CPU-bound and fast — do this part
+    # sequentially, it's not the bottleneck. Only the network upload
+    # needs to be parallelized.
+    chunks = list(split_file(filename))
+    chunk_hashes = [None] * len(chunks)
 
-    for index, chunk in split_file(filename):
+    with ThreadPoolExecutor(max_workers=WINDOW_SIZE) as executor:
 
-        chunk_hash = sha256(chunk)
+        futures = {}
 
-        print(
-            f"Uploading chunk {index}: {chunk_hash}"
-        )
+        for index, chunk in chunks:
+            chunk_hash = sha256(chunk)
+            chunk_hashes[index] = chunk_hash
+            fut = executor.submit(upload_chunk, chunk_hash, chunk)
+            futures[fut] = index
 
-
-        upload_chunk(
-            chunk_hash,
-            chunk
-        )
-
-        chunk_hashes.append(chunk_hash)
-
+        for fut in futures:
+            index = futures[fut]
+            fut.result()
+            print(f"Uploaded chunk {index}/{len(chunks) - 1}")
 
     VIDEO_CHUNK_MAP[video_name] = chunk_hashes
-
-
-    # save_manifest(manifest)
-
 
     print("\nUpload complete")
 
@@ -301,10 +293,12 @@ def main():
                     "Usage: put <file>"
                 )
                 continue
-
+            
+            t = time.time()
             upload_video(
                 parts[1]
             )
+            print("Upload took: " + str(time.time() - t))
 
         elif parts[0] == "get":
 
@@ -317,7 +311,7 @@ def main():
             download_video(
                 parts[1]
             )
-            print("Download took:" + str(time.time() - t))
+            print("Download took: " + str(time.time() - t))
 
         else:
 
