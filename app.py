@@ -76,7 +76,7 @@ def get_node():
 # DHT Communication
 # -------------------------------
 
-def upload_chunk(chunk_hash, data):
+def upload_chunk(chunk_hash, data, parent_video):
 
     now = datetime.now()
 
@@ -88,6 +88,7 @@ def upload_chunk(chunk_hash, data):
 
     value = {
         "data": base64.b64encode(data).decode("ascii"),
+        "parent_video" : parent_video,
         "metadata": metadata
     }
 
@@ -195,7 +196,7 @@ def upload_video(filename):
         for index, chunk in chunks:
             chunk_hash = sha256(chunk)
             chunk_hashes[index] = chunk_hash
-            fut = executor.submit(upload_chunk, chunk_hash, chunk)
+            fut = executor.submit(upload_chunk, chunk_hash, chunk, filename)
             futures[fut] = index
 
         for fut in futures:

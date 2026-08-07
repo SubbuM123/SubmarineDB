@@ -13,6 +13,7 @@ import (
 
 type Value struct {
 	Data string
+	ParentVideo string
 	Descriptors map[string]struct{}
 }
 
@@ -132,6 +133,7 @@ func (n *Node) event_manage() {
 		case "ls":
 			for key, value := range n.hashtable {
 				fmt.Println("key " + key)
+				fmt.Println("Parent Video: " + value.ParentVideo)
 				// fmt.Println("Value " + value.Data)
 				for k := range value.Descriptors {
 					fmt.Println("Desc " + k)

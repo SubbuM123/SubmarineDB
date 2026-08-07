@@ -7,6 +7,7 @@ import (
 
 type kvValuePayload struct {
 	Data     string   `json:"data"`
+	ParentVideo string `json:"parent_video"`
 	Metadata []string `json:"metadata"`
 }
 
@@ -37,7 +38,7 @@ func (n *Node) put_chunk(w http.ResponseWriter, r *http.Request) {
 		descriptors[metadata] = struct{}{}
 	}
 
-	if !n.Put(req.Key, Value{Data: req.Value.Data, Descriptors: descriptors}) {
+	if !n.Put(req.Key, Value{Data: req.Value.Data, ParentVideo: req.Value.ParentVideo, Descriptors: descriptors}) {
 		http.Error(w, "failed to store key/value pair", http.StatusInternalServerError)
 		return
 	}
