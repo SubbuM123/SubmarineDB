@@ -66,3 +66,15 @@ func (n *Node) Delete(key string) bool {
 	}
 	return true
 }
+
+func (n *Node) Search(tag string) []string {
+	res := []string{}
+	
+	for _, value := range n.hashtable {
+        if _, exists := value.Descriptors[tag]; exists {
+            res = append(res, value.ParentVideo)
+        }
+    }
+
+	return res
+}
