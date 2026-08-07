@@ -80,8 +80,12 @@ def upload_chunk(chunk_hash, data, parent_video):
 
     now = datetime.now()
 
+    # metadata = [
+    #     now.strftime("%H:%M:%S"),
+    #     now.strftime("%Y-%m-%d")
+    # ]
     metadata = [
-        now.strftime("%H:%M:%S"),
+        "dog",
         now.strftime("%Y-%m-%d")
     ]
     # TODO metadata = tag_chunk()
@@ -269,6 +273,57 @@ def download_video(filename):
     print("\nDownload complete")
     print("Saved to:", output_path)
 
+def search_node(node, tag):
+    response = requests.get(
+        node + "/search_chunk",
+        params={"tag": tag}
+    )
+
+    if response.status_code != 200:
+        raise Exception(f"Search failed on {node}: {response.text}")
+
+    return response.json()
+
+
+def search_tags(tag):
+    combined = set()
+    with ThreadPoolExecutor(max_workers=len(SERVER)) as executor:
+
+        futures = {executor.submit(search_node, node, tag): node for node in SERVER}
+
+        for fut in futures:
+            node = futures[fut]
+
+            try:
+                results = fut.result()
+                combined.update(results)
+            except Exception as e:
+                print(f"Warning: search on {node} failed: {e}")
+
+    return list(combined)
+
+def get_tags(tag):
+    combined = set()
+    with ThreadPoolExecutor(max_workers=len(SERVER)) as executor:
+
+        futures = {executor.submit(search_node, node, tag): node for node in SERVER}
+
+        for fut in futures:
+            node = futures[fut]
+
+            try:
+                results = fut.result()
+                combined.update(results)
+            except Exception as e:
+                print(f"Warning: search on {node} failed: {e}")
+
+    videos = list(combined)
+
+    for v in videos:
+        print(v)
+        download_video(v)
+
+
 def clear_output():
 
     output_dir = Path("output")
@@ -332,6 +387,28 @@ def main():
                 parts[1]
             )
             print("Download took: " + str(time.time() - t))
+        
+        elif parts[0] == "search":
+
+            if len(parts) != 2:
+                print(
+                    "Usage: search <file>"
+                )
+                continue
+            t = time.time()
+            print(search_tags(parts[1]))
+            print("Search took: " + str(time.time() - t))
+        
+        elif parts[0] == "get_tag":
+
+            if len(parts) != 2:
+                print(
+                    "Usage: get_tag <file>"
+                )
+                continue
+            t = time.time()
+            get_tags(parts[1])
+            print("Search and Downloading took: " + str(time.time() - t))
         
         elif parts[0] == "view":
             os.startfile(str(parts[1]))

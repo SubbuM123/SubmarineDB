@@ -54,6 +54,7 @@ func main() {
 	http.HandleFunc("/put_chunk", n.put_chunk)
 	http.HandleFunc("/get_chunk", n.get_chunk)
 	http.HandleFunc("/delete_chunk", n.delete_chunk)
+	http.HandleFunc("/search_chunk", n.search_chunk)
 	go func() {
 		log.Printf("HTTP endpoint listening on " + py_addr)
 		if err := http.ListenAndServe(py_addr, nil); err != nil {

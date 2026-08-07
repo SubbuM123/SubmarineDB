@@ -70,6 +70,28 @@ func (n *Node) get_chunk(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(value.Data)
 }
 
+func (n *Node) search_chunk(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tag := r.URL.Query().Get("tag")
+	// if key == "" {
+	// 	http.Error(w, "missing key", http.StatusBadRequest)
+	// 	return
+	// }
+
+	res := n.Search(tag)
+	// if !ok {
+	// 	http.Error(w, "key not found", http.StatusNotFound)
+	// 	return
+	// }
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
+}
+
 func (n *Node) delete_chunk(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
