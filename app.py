@@ -11,6 +11,10 @@ import requests
 import random
 
 import os
+# from ultralytics import YOLO
+# import cv2
+
+# model = YOLO("yolov8n.pt")
 
 
 # -------------------------------
@@ -62,6 +66,26 @@ def split_file(filename):
             index += 1
 
 
+
+# def detect_objects(video_path):
+#     cap = cv2.VideoCapture(video_path)
+#     objects = set()
+
+#     while cap.isOpened():
+#         ret, frame = cap.read()
+#         if not ret:
+#             break
+
+#         results = model(frame, verbose=False)
+
+#         for result in results:
+#             for cls in result.boxes.cls:
+#                 objects.add(model.names[int(cls)])
+
+#     cap.release()
+#     return sorted(objects)
+
+
 def get_node():
     """
     For now just use first node.
@@ -76,19 +100,15 @@ def get_node():
 # DHT Communication
 # -------------------------------
 
-def upload_chunk(chunk_hash, data, parent_video):
+def upload_chunk(chunk_hash, data, parent_video, tags):
 
     now = datetime.now()
 
-    # metadata = [
-    #     now.strftime("%H:%M:%S"),
-    #     now.strftime("%Y-%m-%d")
-    # ]
     metadata = [
-        "dog",
+        now.strftime("%H:%M:%S"),
         now.strftime("%Y-%m-%d")
     ]
-    # TODO metadata = tag_chunk()
+    # metadata = tags
 
     value = {
         "data": base64.b64encode(data).decode("ascii"),
@@ -177,7 +197,8 @@ def download_chunk(chunk_hash):
 
 def upload_video(filename):
     path = Path(filename)
-
+    tags = []
+    # tags = detect_objects(filename)
     if not path.exists():
         raise FileNotFoundError(filename)
 
@@ -200,7 +221,7 @@ def upload_video(filename):
         for index, chunk in chunks:
             chunk_hash = sha256(chunk)
             chunk_hashes[index] = chunk_hash
-            fut = executor.submit(upload_chunk, chunk_hash, chunk, filename)
+            fut = executor.submit(upload_chunk, chunk_hash, chunk, filename, tags)
             futures[fut] = index
 
         for fut in futures:
