@@ -159,6 +159,17 @@ def download_chunk(chunk_hash):
 
     return base64.b64decode(encoded_data)
 
+def delete_chunk(chunk_hash):
+    node = get_node()
+    response = requests.delete(
+        node + "/delete_chunk",
+        params={"key": chunk_hash}
+    )
+    if response.status_code != 200:
+        raise Exception(f"Chunk delete failed: {response.text}")
+    return
+
+
 # -------------------------------
 # Upload Video
 # -------------------------------
@@ -294,6 +305,28 @@ def download_video(filename):
     print("\nDownload complete")
     print("Saved to:", output_path)
 
+def delete_video(filename):
+
+    video_name = Path(filename).name
+
+    if video_name not in VIDEO_CHUNK_MAP:
+        raise KeyError(f"No chunk mapping found for {video_name}")
+
+    chunk_hashes = VIDEO_CHUNK_MAP[video_name]
+
+    print("Deleting:", video_name)
+
+    with ThreadPoolExecutor(max_workers=WINDOW_SIZE) as executor:
+
+        futures = [executor.submit(delete_chunk, h) for h in chunk_hashes]
+
+        for fut in futures:
+            fut.result()  # raises if a chunk failed to delete after retries
+
+    del VIDEO_CHUNK_MAP[video_name]
+
+    print("\nDelete complete")
+
 def search_node(node, tag):
     response = requests.get(
         node + "/search_chunk",
@@ -408,6 +441,19 @@ def main():
                 parts[1]
             )
             print("Download took: " + str(time.time() - t))
+        
+        elif parts[0] == "delete":
+
+            if len(parts) != 2:
+                print(
+                    "Usage: delete <file>"
+                )
+                continue
+            t = time.time()
+            delete_video(
+                parts[1]
+            )
+            print("Delete took: " + str(time.time() - t))
         
         elif parts[0] == "search":
 
