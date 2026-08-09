@@ -1,6 +1,8 @@
-# SubmarineDB
+# SubmarineDB - Personal Cloud Video Catalog
 
 SubmarineDB is a small Chord-like distributed hash table (DHT) for storing chunked video data across multiple nodes. The project combines a Go-based node runtime with a Python client so you can upload video files, retrieve them later, search by YOLO-detected object tags, and download the reconstructed output.
+
+This project was forked from https://github.com/SubbuM123/DistributedHashTable, an old project of mine. This project expands upon the old one by added support for video storage, advanced CLI, video tagging, rather than key-value storage. The underlying DHT system is mostly unchanged from the previous project, though.
 
 ## What this project does
 
