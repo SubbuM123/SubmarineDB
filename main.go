@@ -12,15 +12,15 @@ import (
 func main() {
 	// start with the following format "./node bs id ip" -> "./node 127.0.0.1:8033 1 127.0.0.1:8001"
 	// for starting node, bs can be START
-	bs := os.Args[1]
+	bs_addr := os.Args[1]
 	id := os.Args[2]
-	// log_addr := os.Args[3]
+	log_addr := os.Args[3]
 	node_id, _ := strconv.ParseUint(id, 10, 64)
-	log_addr := "127.0.0.1:" + strconv.Itoa(int(8000 + node_id))
+	// log_addr := "127.0.0.1:" + strconv.Itoa(int(8000 + node_id))
 	py_addr := "127.0.0.1:" + strconv.Itoa(int(7000 + node_id))
 
-	node_bs, _ := strconv.ParseUint(bs, 10, 64)
-	bs_addr := "127.0.0.1:" + strconv.Itoa(int(8000 + node_bs))
+	// node_bs, _ := strconv.ParseUint(bs, 10, 64)
+	// bs_addr := "127.0.0.1:" + strconv.Itoa(int(8000 + node_bs))
 
 	n := Node{
 		hashtable:      make(map[string]Value),
