@@ -67,7 +67,8 @@ func (n *Node) BackupData() {
 		"\n Node %d BACKUP \n",
 		n.id,
 	)
-
+	n.mu.RLock()
+	defer n.mu.RUnlock()
 	for key, value := range n.hashtable {
 		fmt.Fprintf(
 		file,

@@ -9,8 +9,12 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import requests
 import random
+import numpy as np
+
+from generate_files import generate_single_file
 
 import os
+import pandas as pd
 # from ultralytics import YOLO
 # import cv2
 
@@ -33,6 +37,8 @@ CHUNK_SIZE = 1024 * 1024  # 1 MB
 VIDEO_CHUNK_MAP = {}
 
 WINDOW_SIZE = 16
+WARMUP = 5
+ITERATIONS = 30
 
 # -------------------------------
 # Helpers
@@ -153,39 +159,39 @@ def delete_chunk(chunk_hash):
 # Upload Video
 # -------------------------------
 
-def upload_video_slow(filename):
+# def upload_video_slow(filename):
 
-    path = Path(filename)
+#     path = Path(filename)
 
-    if not path.exists():
-        raise FileNotFoundError(filename)
-
-
-    video_id = str(uuid.uuid4())
-    video_name = path.name
-    chunk_hashes = []
+#     if not path.exists():
+#         raise FileNotFoundError(filename)
 
 
-    print("Uploading:", video_name)
-    print("Video ID:", video_id)
+#     video_id = str(uuid.uuid4())
+#     video_name = path.name
+#     chunk_hashes = []
 
 
-    for index, chunk in split_file(filename):
+#     print("Uploading:", video_name)
+#     print("Video ID:", video_id)
 
-        chunk_hash = sha256(chunk)
-        print(
-            f"Uploading chunk {index}: {chunk_hash}"
-        )
-        upload_chunk(
-            chunk_hash,
-            chunk
-        )
-        chunk_hashes.append(chunk_hash)
 
-    VIDEO_CHUNK_MAP[video_name] = chunk_hashes
-    print("\nUpload complete")
+#     for index, chunk in split_file(filename):
 
-def upload_video(filename):
+#         chunk_hash = sha256(chunk)
+#         print(
+#             f"Uploading chunk {index}: {chunk_hash}"
+#         )
+#         upload_chunk(
+#             chunk_hash,
+#             chunk
+#         )
+#         chunk_hashes.append(chunk_hash)
+
+#     VIDEO_CHUNK_MAP[video_name] = chunk_hashes
+#     print("\nUpload complete")
+
+def upload_video(filename, window_size=1):
     path = Path(filename)
     tags = []
     # tags = detect_objects(filename)
@@ -196,7 +202,7 @@ def upload_video(filename):
     video_name = path.name
 
     print("Uploading:", video_name)
-    print("Video ID:", video_id)
+    # print("Video ID:", video_id)
 
     # Reading + hashing is local/CPU-bound and fast — do this part
     # sequentially, it's not the bottleneck. Only the network upload
@@ -204,7 +210,7 @@ def upload_video(filename):
     chunks = list(split_file(filename))
     chunk_hashes = [None] * len(chunks)
 
-    with ThreadPoolExecutor(max_workers=WINDOW_SIZE) as executor:
+    with ThreadPoolExecutor(max_workers=window_size) as executor:
 
         futures = {}
 
@@ -217,45 +223,45 @@ def upload_video(filename):
         for fut in futures:
             index = futures[fut]
             fut.result()
-            print(f"Uploaded chunk {index}/{len(chunks) - 1}")
+            # print(f"Uploaded chunk {index}/{len(chunks) - 1}")
 
     VIDEO_CHUNK_MAP[video_name] = chunk_hashes
 
-    print("\nUpload complete")
+    # print("\nUpload complete")
 
 # this is the slow sequential version
-def download_video_slow(filename):
+# def download_video_slow(filename):
 
-    video_name = Path(filename).name
+#     video_name = Path(filename).name
 
-    if video_name not in VIDEO_CHUNK_MAP:
-        raise KeyError(
-            f"No chunk mapping found for {video_name}"
-        )
+#     if video_name not in VIDEO_CHUNK_MAP:
+#         raise KeyError(
+#             f"No chunk mapping found for {video_name}"
+#         )
 
-    output_dir = Path("output")
-    output_dir.mkdir(exist_ok=True)
+#     output_dir = Path("output")
+#     output_dir.mkdir(exist_ok=True)
 
-    output_path = output_dir / video_name
+#     output_path = output_dir / video_name
 
-    print("Downloading:", video_name)
+#     print("Downloading:", video_name)
 
-    with output_path.open("wb") as f:
+#     with output_path.open("wb") as f:
 
-        for chunk_hash in VIDEO_CHUNK_MAP[video_name]:
+#         for chunk_hash in VIDEO_CHUNK_MAP[video_name]:
 
-            # print(
-            #     f"Downloading chunk: {chunk_hash}"
-            # )
+#             # print(
+#             #     f"Downloading chunk: {chunk_hash}"
+#             # )
 
-            chunk_data = download_chunk(chunk_hash)
-            f.write(chunk_data)
+#             chunk_data = download_chunk(chunk_hash)
+#             f.write(chunk_data)
 
-    print("\nDownload complete")
-    print("Saved to:", output_path)
+#     print("\nDownload complete")
+#     print("Saved to:", output_path)
 
 # this version parallelizes the download
-def download_video(filename):
+def download_video(filename, window_size = 1):
 
     video_name = Path(filename).name
 
@@ -270,7 +276,7 @@ def download_video(filename):
 
     print("Downloading:", video_name)
 
-    with output_path.open("wb") as f, ThreadPoolExecutor(max_workers=WINDOW_SIZE) as executor:
+    with output_path.open("wb") as f, ThreadPoolExecutor(max_workers=window_size) as executor:
 
         # Submitting all at once is fine — max_workers caps how many
         # actually run concurrently; the rest just sit queued.
@@ -281,8 +287,8 @@ def download_video(filename):
             f.write(data)
             # print(f"Wrote chunk {index}/{len(futures) - 1}")
 
-    print("\nDownload complete")
-    print("Saved to:", output_path)
+    # print("\nDownload complete")
+    # print("Saved to:", output_path)
 
 def delete_video(filename):
 
@@ -293,7 +299,7 @@ def delete_video(filename):
 
     chunk_hashes = VIDEO_CHUNK_MAP[video_name]
 
-    print("Deleting:", video_name)
+    # print("Deleting:", video_name)
 
     with ThreadPoolExecutor(max_workers=WINDOW_SIZE) as executor:
 
@@ -304,14 +310,14 @@ def delete_video(filename):
 
     del VIDEO_CHUNK_MAP[video_name]
 
-    print("\nDelete complete")
+    # print("\nDelete complete")
 
 def clear_output():
 
     output_dir = Path("output")
 
     if not output_dir.exists():
-        print("Nothing to clear — output/ doesn't exist")
+        # print("Nothing to clear — output/ doesn't exist")
         return
 
     count = 0
@@ -321,7 +327,108 @@ def clear_output():
             p.unlink()
             count += 1
 
-    print(f"Cleared {count} file(s) from output/")
+    # print(f"Cleared {count} file(s) from output/")
+
+def test_speed(iter = ITERATIONS, thread_count = WINDOW_SIZE):
+    filename = "speed_input/test"
+
+    sizes = [8, 16, 32, 64, 128]
+
+    for i in range(WARMUP):
+        upload_video("speed_input/8", window_size=WINDOW_SIZE)
+        # delete_video(filename)
+
+    data = []
+    for i in range(iter):
+        for size in sizes:
+            generate_single_file(size)
+            t = time.time()
+            upload_video(filename, window_size=thread_count)
+            t2 = time.time() - t
+
+            data.append({"operation": "upload", "threads": thread_count, "size": size, "time": t2})
+
+            t = time.time()
+            download_video(filename, window_size=thread_count)
+            t2 = time.time() - t
+            data.append({"operation": "download", "threads": thread_count, "size": size, "time": t2})
+
+            delete_video(filename)
+
+        df = pd.DataFrame(data)
+        df.to_csv(f"speed_data_{thread_count}.csv", index=False)
+
+
+# def test_fast(size, iter = ITERATIONS):
+#     filename = "speed_input/test"
+
+#     for i in range(WARMUP):
+#         generate_single_file(size)
+#         upload_video("speed_input/8", window_size=WINDOW_SIZE)
+#         # delete_video(filename)
+
+#     put_times = []
+#     get_times = []
+#     for i in range(iter):
+#         generate_single_file(size)
+#         t = time.time()
+#         upload_video(filename, window_size=WINDOW_SIZE)
+#         t2 = time.time() - t
+#         put_times.append(t2)
+
+#         t = time.time()
+#         download_video(filename, window_size=WINDOW_SIZE)
+#         t2 = time.time() - t
+#         get_times.append(t2)
+#         # TODO  REMOVE
+#         with open("put_data.txt", "a") as file:
+#             file.write(f"{size}: {str(put_times[-1])}")
+#         with open("get_data.txt", "a") as file:
+#             file.write(f"{size}: {str(get_times[-1])}")
+
+#         delete_video(filename)
+
+#     np.save(f"data/put_data_{size}", np.array(put_times))
+#     np.save(f"data/get_data_{size}", np.array(get_times))
+
+#     print("Average upload time: ", sum(put_times)/iter)
+#     print("Average download time: ", sum(get_times)/iter)
+
+# def test_slow(size, iter = ITERATIONS):
+#     filename = "speed_input/test"
+
+#     for i in range(WARMUP):
+#         generate_single_file(size)
+#         upload_video("speed_input/8", window_size=WINDOW_SIZE)
+#         # delete_video(filename)
+
+#     put_times = []
+#     get_times = []
+#     for i in range(iter):
+#         generate_single_file(size)
+#         t = time.time()
+#         upload_video(filename, window_size=1)
+#         t2 = time.time() - t
+#         put_times.append(t2)
+
+#         t = time.time()
+#         download_video(filename, window_size=1)
+#         t2 = time.time() - t
+#         get_times.append(t2)
+#         # TODO  REMOVE
+#         with open("put_data.txt", "a") as file:
+#             file.write(f"{size}: {str(put_times[-1])}")
+#         with open("get_data.txt", "a") as file:
+#             file.write(f"{size}: {str(get_times[-1])}")
+
+#         delete_video(filename)
+
+#     np.save(f"data/put_data_{size}", np.array(put_times))
+#     np.save(f"data/get_data_{size}", np.array(get_times))
+
+#     print("Average upload time: ", sum(put_times)/iter)
+#     print("Average download time: ", sum(get_times)/iter)
+
 
 
 # -------------------------------
@@ -339,85 +446,20 @@ def main():
 
 
         parts = command.split(
-            maxsplit=1
+            maxsplit=2
         )
 
-
-        if parts[0] == "put_fast":
-
-            if len(parts) != 2:
-                print(
-                    "Usage: put <file>"
-                )
-                continue
-            times = []
-            for i in range(10):
-                t = time.time()
-                upload_video(
-                    parts[1]
-                )
-                t2 = time.time() - t
-
-                times.append(t2)
-                delete_video(parts[1])
-            print("Average upload time: " + str(sum(times))/10)
-
-        elif parts[0] == "get_fast":
-
-            if len(parts) != 2:
-                print(
-                    "Usage: put <file>"
-                )
-                continue
-            times = []
-            for i in range(10):
-                t = time.time()
-                download_video(
-                    parts[1]
-                )
-                t2 = time.time() - t
-
-                times.append(t2)
-                clear_output()
-            print("Average download time: " + str(sum(times))/10)
-
-        elif parts[0] == "put_slow":
-
-            if len(parts) != 2:
-                print(
-                    "Usage: put <file>"
-                )
-                continue
-            times = []
-            for i in range(10):
-                t = time.time()
-                upload_video_slow(
-                    parts[1]
-                )
-                t2 = time.time() - t
-
-                times.append(t2)
-                delete_video(parts[1])
-            print("Average slow upload time: " + str(sum(times))/10)
-
-        elif parts[0] == "get_slow":
-
-            if len(parts) != 2:
-                print(
-                    "Usage: put <file>"
-                )
-                continue
-            times = []
-            for i in range(10):
-                t = time.time()
-                download_video_slow(
-                    parts[1]
-                )
-                t2 = time.time() - t
-
-                times.append(t2)
-                clear_output()
-            print("Average slow download time: " + str(sum(times))/10)
+        if parts[0] == "f":
+            test_speed(int(parts[1]), int(parts[2]))
+            # if len(parts) == 2:
+            #     test_fast(parts[1])
+            # else:
+            #     test_fast(parts[1], int(parts[2]))
+        # elif parts[0] == "s":
+        #     if len(parts) == 2:
+        #         test_slow(parts[1])
+        #     else:
+        #         test_slow(parts[1], int(parts[2]))
         
         elif parts[0] == "view":
             os.startfile(str(parts[1]))
@@ -446,3 +488,99 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+# if parts[0] == "put_fast":
+
+#             if len(parts) != 2:
+#                 print(
+#                     "Usage: put <file>"
+#                 )
+#                 continue
+
+#             for i in range(WARMUP):
+#                 upload_video(
+#                     parts[1],
+#                     window_size=WINDOW_SIZE
+#                 )
+#                 delete_video(parts[1])
+
+#             times = []
+#             for i in range(ITERATIONS):
+#                 t = time.time()
+#                 upload_video(
+#                     parts[1],
+#                     window_size=WINDOW_SIZE
+#                 )
+#                 t2 = time.time() - t
+
+#                 times.append(t2)
+#                 delete_video(parts[1])
+#             print("Average upload time: " + str(sum(times)/ITERATIONS))
+
+#         elif parts[0] == "get_fast":
+
+#             if len(parts) != 2:
+#                 print(
+#                     "Usage: put <file>"
+#                 )
+#                 continue
+
+#             for i in range(WARMUP):
+#                 upload_video(
+#                     parts[1],
+#                     window_size=WINDOW_SIZE
+#                 )
+#                 delete_video(parts[1])
+
+#             times = []
+#             for i in range(ITERATIONS):
+#                 t = time.time()
+#                 download_video(
+#                     parts[1],
+#                     window_size=WINDOW_SIZE
+#                 )
+#                 t2 = time.time() - t
+
+#                 times.append(t2)
+#                 clear_output()
+#             print("Average download time: ", times)
+
+#         elif parts[0] == "put_slow":
+
+#             if len(parts) != 2:
+#                 print(
+#                     "Usage: put <file>"
+#                 )
+#                 continue
+#             times = []
+#             for i in range(ITERATIONS):
+#                 t = time.time()
+#                 upload_video(
+#                     parts[1]
+#                 )
+#                 t2 = time.time() - t
+
+#                 times.append(t2)
+#                 delete_video(parts[1])
+#             print("Average slow upload time: ", times)
+
+#         elif parts[0] == "get_slow":
+
+#             if len(parts) != 2:
+#                 print(
+#                     "Usage: put <file>"
+#                 )
+#                 continue
+#             times = []
+#             for i in range(ITERATIONS):
+#                 t = time.time()
+#                 download_video(
+#                     parts[1]
+#                 )
+#                 t2 = time.time() - t
+
+#                 times.append(t2)
+#                 clear_output()
+#             print("Average slow download time: " + str(sum(times)/ITERATIONS))

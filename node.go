@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	// "errors"
+	"sync"
 )
 
 type Value struct {
@@ -18,6 +19,8 @@ type Value struct {
 }
 
 type Node struct {
+    mu    sync.RWMutex
+
 	hashtable map[string]Value
 	pred_replica map[string]Value
 

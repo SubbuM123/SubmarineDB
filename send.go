@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"fmt"
+	//"fmt"
 	"net/rpc"
 )
 
@@ -36,7 +36,7 @@ func (n *Node) SendPut(addr string, key string, value Value) error {
 
 func (n *Node) SendGet(addr string, key string) (Value, error) {
 	// addr := curr.addr
-	fmt.Println("sent rpc")
+	//fmt.Println("sent rpc")
 	// fmt.Println(addr)
 	client, err := rpc.Dial("tcp", addr)
 	if err != nil {
